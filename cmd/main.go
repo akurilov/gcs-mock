@@ -1,9 +1,11 @@
 package cmd
 
 import (
-	"github.com/uber-go/zap"
-	"log"
+	"github.com/akurilov/gcs-mock/internal"
+	"go.uber.org/zap"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 )
 
@@ -12,43 +14,59 @@ const (
 )
 
 var (
+	log            = initLogger()
 	uriPathPattern = regexp.MustCompile(uriPathPatternRaw)
 )
 
-type Operation int
+func initLogger() *zap.Logger {
+	l, e := zap.NewProduction()
+	if e != nil {
+		panic(e)
+	}
+	return l
+}
 
-const (
-	Create Operation = iota + 1
-	Read
-	Delete
-	List
-)
-
-func gcsHandler(respWriter http.ResponseWriter, req *http.Request) {
-	reqPath := req.URL.Path
-	result := uriPathPattern.FindStringSubmatch(reqPath)
-	bucket := result[1]
-	object := result[3]
-	if len(bucket) > 0 {
+func gcsHandler(dataDir string) func(respWriter http.ResponseWriter, req *http.Request) {
+	return func(respWriter http.ResponseWriter, req *http.Request) {
+		reqPath := req.URL.Path
+		result := uriPathPattern.FindStringSubmatch(reqPath)
+		bucket := result[1]
+		object := result[3]
 		if len(object) > 0 {
-			handleObjectRequest(respWriter, req.Method, bucket, object)
+			handleObjectRequest(respWriter, req, bucket, object)
 		} else {
-			handleBucketRequest(respWriter, req.Method, bucket)
+			handleBucketRequest(respWriter, req, bucket)
 		}
-	} else {
-
 	}
 }
 
-func handleBucketRequest(respWriter http.ResponseWriter, method string, bucket string) {
-
+func handleBucketRequest(respWriter http.ResponseWriter, req *http.Request, bucket string) {
+	switch req.Method {
+	case "DELETE":
+		err := internal.DeleteBucket(bucket)
+	case "GET":
+		if len(bucket) > 0 {
+			bucketResource, err := internal.ReadBucket(bucket)
+		} else {
+			pageToken := req.URL.Query().Get("pageToken")
+			bucketResources, err := internal.ListBuckets(pageToken)
+		}
+	case "POST":
+		bucketResource, err := internal.CreateBucket()
+	}
 }
 
-func handleObjectRequest(respWriter http.ResponseWriter, method string, bucket string, object string) {
+func handleObjectRequest(respWriter http.ResponseWriter, req *http.Request, bucket string, object string) {
 
 }
 
 func main() {
-	http.HandleFunc("/", gcsHandler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	defer log.Sync()
+	dataDir, _ := os.Getwd()
+	if len(os.Args) > 0 {
+		dataDir, _ = filepath.Abs(os.Args[1])
+	}
+	http.HandleFunc("/", gcsHandler(dataDir))
+	err := http.ListenAndServe(":8080", nil)
+	log.Fatal("", zap.Error(err))
 }
