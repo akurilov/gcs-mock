@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -32,19 +32,26 @@ func Handler(dataDir string) func(respWriter http.ResponseWriter, req *http.Requ
 	}
 }
 
-func handleBucketRequest(storage *Storage, respWriter http.ResponseWriter, req *http.Request, bucket string) {
+func handleBucketRequest(storage *Storage, resp http.ResponseWriter, req *http.Request, bucket string) {
 	switch req.Method {
 	case "DELETE":
 		err := storage.DeleteBucket(bucket)
 		if err == nil {
-			fmt.Print(respWriter, "")
+			resp.WriteHeader(http.StatusNoContent)
 		} else {
-			respWriter.WriteHeader(500)
-			fmt.Print(respWriter, "")
+			resp.WriteHeader(http.StatusInternalServerError)
 		}
 	case "GET":
 		if len(bucket) > 0 {
 			err := storage.ReadBucket(bucket)
+			if err == nil {
+				resp.WriteHeader(http.StatusOK)
+				resp.Header().Set("Content-Type", "application/json")
+				encoder := json.NewEncoder(resp)
+				encoder.Encode(NewBucketResource(bucket))
+			} else {
+				resp.WriteHeader(http.StatusInternalServerError)
+			}
 		} else {
 			query := req.URL.Query()
 			maxResults, err := strconv.Atoi(query.Get("maxResults"))
@@ -53,15 +60,34 @@ func handleBucketRequest(storage *Storage, respWriter http.ResponseWriter, req *
 			}
 			pageToken := query.Get("pageToken")
 			prefix := query.Get("prefix")
-			storage.ListBuckets(maxResults, pageToken, prefix)
-
+			buckets, err := storage.ListBuckets(maxResults, pageToken, prefix)
+			if err == nil {
+				resp.Header().Set("Content-Type", "application/json")
+				encoder := json.NewEncoder(resp)
+				encoder.Encode(NewBucketListResource(buckets))
+			} else {
+				resp.WriteHeader(http.StatusInternalServerError)
+			}
 		}
 	case "POST":
-		bucketResource, err := internal.CreateBucket()
+		decoder := json.NewDecoder(req.Body)
+		var res bucketResource
+		err := decoder.Decode(&res)
+		if err != nil {
+			resp.WriteHeader(http.StatusBadRequest)
+		} else {
+			bucket := res.Name
+			err := storage.CreateBucket(bucket)
+			if err == nil {
+				resp.WriteHeader(http.StatusCreated)
+			} else {
+				resp.WriteHeader(http.StatusInternalServerError)
+			}
+		}
 	}
 }
 
 func handleObjectRequest(
 	storage *Storage, respWriter http.ResponseWriter, req *http.Request, bucket string, object string) {
-
+	// TODO
 }

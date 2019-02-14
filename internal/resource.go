@@ -2,15 +2,19 @@ package internal
 
 import "time"
 
+type ResourceBase struct {
+	Kind string
+}
+
 type Owner struct {
 	Entity   string
 	EntityId string
 }
 
-type Resource struct {
+type NamedResource struct {
+	ResourceBase
 	Etag        string
 	Id          string
-	Kind        string
 	Name        string
 	Owner       Owner
 	SelfLink    string
@@ -19,47 +23,74 @@ type Resource struct {
 }
 
 type bucketResource struct {
-	Resource
+	NamedResource
 }
 
 func NewBucketResource(id string) *bucketResource {
 	return &bucketResource{
-		Resource{
-			Etag: "",
-			Id:   id,
-			Kind: "storage#bucket",
-			Name: id,
-			Owner: Owner{
+		NamedResource{
+			ResourceBase{
+				Kind: "storage#bucket",
+			},
+			"",
+			id,
+			id,
+			Owner{
 				Entity:   "",
 				EntityId: "",
 			},
-			SelfLink:    "",
-			TimeCreated: time.Now(),
-			Updated:     time.Now(),
+			"",
+			time.Now(),
+			time.Now(),
 		},
 	}
 }
 
+type bucketListResource struct {
+	ResourceBase
+	NextPageToken string
+	Items         []*bucketResource
+}
+
+func NewBucketListResource(buckets []string) *bucketListResource {
+	var bucketResources []*bucketResource
+	bucketResources = make([]*bucketResource, 0, len(buckets))
+	var lastBucket string
+	for _, bucket := range buckets {
+		bucketResources = append(bucketResources, NewBucketResource(bucket))
+		lastBucket = bucket
+	}
+	return &bucketListResource{
+		ResourceBase{
+			Kind: "storage#buckets",
+		},
+		lastBucket,
+		bucketResources,
+	}
+}
+
 type objectResource struct {
-	Resource
+	NamedResource
 	Bucket string
 	Size   uint64
 }
 
 func NewObjectResource(bucket string, id string, size uint64) *objectResource {
 	return &objectResource{
-		Resource{
-			Etag: "",
-			Id:   id,
-			Kind: "storage#object",
-			Name: id,
-			Owner: Owner{
+		NamedResource{
+			ResourceBase{
+				Kind: "storage#object",
+			},
+			"",
+			id,
+			id,
+			Owner{
 				Entity:   "",
 				EntityId: "",
 			},
-			SelfLink:    "",
-			TimeCreated: time.Now(),
-			Updated:     time.Now(),
+			"",
+			time.Now(),
+			time.Now(),
 		},
 		bucket,
 		size,
