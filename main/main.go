@@ -1,7 +1,7 @@
-package cmd
+package main
 
 import (
-	"github.com/akurilov/gcs-mock/internal"
+	"github.com/akurilov/gcs-mock/pkg"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
@@ -23,10 +23,10 @@ func initLogger() *zap.Logger {
 func main() {
 	defer log.Sync()
 	dataDir, _ := os.Getwd()
-	if len(os.Args) > 0 {
+	if len(os.Args) > 1 {
 		dataDir, _ = filepath.Abs(os.Args[1])
 	}
-	http.HandleFunc("/", internal.Handler(dataDir))
+	http.HandleFunc("/", pkg.Handler(dataDir))
 	err := http.ListenAndServe(":8080", nil)
 	log.Fatal("", zap.Error(err))
 }

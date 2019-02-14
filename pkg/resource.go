@@ -1,25 +1,25 @@
-package internal
+package pkg
 
 import "time"
 
 type ResourceBase struct {
-	Kind string
+	Kind string `json:"kind"`
 }
 
 type Owner struct {
-	Entity   string
-	EntityId string
+	Entity   string `json:"entity"`
+	EntityId string `json:"entityId"`
 }
 
 type NamedResource struct {
 	ResourceBase
-	Etag        string
-	Id          string
-	Name        string
-	Owner       Owner
-	SelfLink    string
-	TimeCreated time.Time
-	Updated     time.Time
+	Etag        string    `json:"etag"`
+	Id          string    `json:"id"`
+	Name        string    `json:"name"`
+	Owner       Owner     `json:"owner"`
+	SelfLink    string    `json:"selfLink"`
+	TimeCreated time.Time `json:"timeCreated"`
+	Updated     time.Time `json:"updated"`
 }
 
 type bucketResource struct {
@@ -48,8 +48,8 @@ func NewBucketResource(id string) *bucketResource {
 
 type bucketListResource struct {
 	ResourceBase
-	NextPageToken string
-	Items         []*bucketResource
+	NextPageToken string            `json:"nextPageToken"`
+	Items         []*bucketResource `json:"items"`
 }
 
 func NewBucketListResource(buckets []string) *bucketListResource {
@@ -71,8 +71,8 @@ func NewBucketListResource(buckets []string) *bucketListResource {
 
 type objectResource struct {
 	NamedResource
-	Bucket string
-	Size   uint64
+	Bucket string `json:"bucket"`
+	Size   uint64 `json:"size"`
 }
 
 func NewObjectResource(bucket string, id string, size uint64) *objectResource {

@@ -1,4 +1,4 @@
-package internal
+package pkg
 
 import (
 	"io"
@@ -23,12 +23,15 @@ func (s *Storage) CreateBucket(name string) error {
 
 func (s *Storage) ReadBucket(name string) error {
 	fileInfo, err := os.Stat(filepath.Join(s.dataDir, name))
-	if fileInfo.IsDir() {
-		return nil
+	if err == nil {
+		if fileInfo.IsDir() {
+			return nil
+		} else {
+			return os.ErrExist
+		}
 	} else {
-		return os.ErrExist
+		return os.ErrNotExist
 	}
-	return err
 }
 
 func (s *Storage) DeleteBucket(name string) error {
@@ -46,7 +49,10 @@ func (s *Storage) ListBuckets(maxResults int, pageToken string, prefix string) (
 	buckets = make([]string, 0, maxResults)
 	err = nil
 	prefixLen := len(prefix)
-	tokenFound := false
+	tokenFound := true
+	if len(pageToken) > 0 {
+		tokenFound = false
+	}
 	for len(buckets) < maxResults {
 		fileInfo, err := f.Readdir(maxResults)
 		if err == io.EOF {
@@ -77,4 +83,20 @@ func (s *Storage) ListBuckets(maxResults int, pageToken string, prefix string) (
 		}
 	}
 	return buckets, err
+}
+
+func CreateObject(bucket string, name string) error {
+	return nil
+}
+
+func ReadObject(bucket string, name string) error {
+	return nil
+}
+
+func DeleteObject(bucket string, name string) error {
+	return nil
+}
+
+func ListObjects(bucket string) error {
+	return nil
 }
